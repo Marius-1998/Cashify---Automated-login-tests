@@ -1,0 +1,26 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service as ChromeService
+from webdriver_manager.chrome import ChromeDriverManager
+
+driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
+
+#Testing appropriate title display
+def verify_title():
+    #This will open the corresponding website
+    driver.get("https://kapusta-qa-ro.p.goit.global/")
+
+    #Read the actual title
+    title = driver.title
+
+    #Define the expected title
+    expected_title = "Cashify"
+
+    #Check if the title is correct
+    if title == expected_title:
+        print("Test Passed - Title is correct")
+    else:
+        print("Test failed - title is: ", title, ". Expected result: ",expected_title)
+
+    #Close the browser
+    driver.quit()
+verify_title()
