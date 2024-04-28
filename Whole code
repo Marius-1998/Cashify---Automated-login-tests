@@ -1,26 +1,68 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
 
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
+URL = "https://kapusta-qa-ro.p.goit.global/"
 
-#Testing appropriate title display
-def verify_title():
-    #This will open the corresponding website
-    driver.get("https://kapusta-qa-ro.p.goit.global/")
-
-    #Read the actual title
+def tc1_verify_title():
+    driver.get(URL)
     title = driver.title
-
-    #Define the expected title
     expected_title = "Cashify"
-
-    #Check if the title is correct
     if title == expected_title:
         print("Test Passed - Title is correct")
     else:
-        print("Test failed - title is: ", title, ". Expected result: ",expected_title)
+        print("Test failed - title is: ", title, ". Expected result: ", expected_title)
 
-    #Close the browser
+def tc2_register():
+    try:
+        username = "test.mail@yahoo.com"
+        password = "Testpassword123!@#"
+        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.NAME, "email")))
+        driver.find_element(By.NAME, "email").send_keys(username)
+        driver.find_element(By.NAME, "password").send_keys(password)
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".Auth_button__oOib1"))).click()
+        print("Passed registration")
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".UserLogOut_logOutTextBtn__bR9SC"))).click()
+        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".Modal_buttonStyles__mzMW-:not(:last-child)"))).click()
+        if driver.current_url == "https://kapusta-qa-ro.p.goit.global/":
+            print("Logged out - successful")
+        else:
+            print("Log out - failed")
+    except NoSuchElementException:
+        print("Element not found. Please check the element's locator.")
+    except StaleElementReferenceException:
+        print("Stale element reference. The element is no longer attached to the DOM.")
+    except ElementClickInterceptedException:
+        print("Element click intercepted. Another element would receive the click.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        driver.quit() # Quit the driver after test 2
+
+def tc3_login():
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install())) # Reinitialize the driver for test 3
+    driver.get(URL) # Start a new browser session
+    username = "test.mail@yahoo.com"
+    password = "Testpassword123!@#"
+    WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".Auth_input__njf2M")))
+    driver.find_element(By.CSS_SELECTOR, ".Auth_input__njf2M").send_keys(username)
+    driver.find_element(By.CSS_SELECTOR, ".Auth_input__njf2M").send_keys(password)
+    WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".Auth_buttonSubmit__ii556"))).click()
+
+    current_url = driver.current_url
+
+    if current_url == "https://kapusta-qa-ro.p.goit.global/transactions/expenses":
+        print("Passed login")
+    else:
+        print("Login failed")
+
     driver.quit()
-verify_title()
+
+tc1_verify_title()
+tc2_register()
+tc3_login()
