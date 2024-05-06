@@ -3,8 +3,8 @@ from selenium.webdriver.chrome.service import Service as ChromeService
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException, TimeoutException
 
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))
 URL = "https://kapusta-qa-ro.p.goit.global/"
@@ -22,13 +22,22 @@ def tc2_register():
     try:
         username = "test.mail@yahoo.com"
         password = "Testpassword123!@#"
-        WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.NAME, "email")))
+        WebDriverWait(driver, 5).until(ec.presence_of_element_located((By.NAME, "email")))
         driver.find_element(By.NAME, "email").send_keys(username)
         driver.find_element(By.NAME, "password").send_keys(password)
-        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".Auth_button__oOib1"))).click()
+        WebDriverWait(driver, 5).until(ec.element_to_be_clickable((By.CSS_SELECTOR, ".Auth_button__oOib1"))).click()
         print("Passed registration")
-        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".UserLogOut_logOutTextBtn__bR9SC"))).click()
-        WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".Modal_buttonStyles__mzMW-:not(:last-child)"))).click()
+
+        # Check if the "Account already created" message is displayed
+        try:
+            WebDriverWait(driver, 5).until(ec.visibility_of_element_located((By.XPATH, "//div[contains(text(),'Sorry, but provided email already exists')]")))
+            print("Account already created")
+            return  # Skip to the next test case
+        except TimeoutException:
+            pass  # Continue with the registration process if the message is not displayed
+
+        WebDriverWait(driver, 5).until(ec.element_to_be_clickable((By.CSS_SELECTOR, ".UserLogOut_logOutTextBtn__bR9SC"))).click()
+        WebDriverWait(driver, 5).until(ec.element_to_be_clickable((By.CSS_SELECTOR, ".Modal_buttonStyles__mzMW-:not(:last-child)"))).click()
         if driver.current_url == "https://kapusta-qa-ro.p.goit.global/":
             print("Logged out - successful")
         else:
@@ -44,24 +53,37 @@ def tc2_register():
     finally:
         driver.quit() # Quit the driver after test 2
 
+
+
 def tc3_login():
-    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install())) # Reinitialize the driver for test 3
-    driver.get(URL) # Start a new browser session
+    driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()))  # Reinitialize the driver for test 3
+    driver.get(URL)  # Start a new browser session
     username = "test.mail@yahoo.com"
     password = "Testpassword123!@#"
-    WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, ".Auth_input__njf2M")))
-    driver.find_element(By.CSS_SELECTOR, ".Auth_input__njf2M").send_keys(username)
-    driver.find_element(By.CSS_SELECTOR, ".Auth_input__njf2M").send_keys(password)
-    WebDriverWait(driver, 5).until(EC.element_to_be_clickable((By.CSS_SELECTOR, ".Auth_buttonSubmit__ii556"))).click()
+    try:
+        WebDriverWait(driver, 10).until(ec.presence_of_element_located((By.CSS_SELECTOR, ".Auth_input__njf2M")))
+        username_input = driver.find_element(By.CSS_SELECTOR, ".Auth_input__njf2M")
+        username_input.send_keys(username)
 
-    current_url = driver.current_url
+        password_input = driver.find_element(By.NAME, "password")
+        password_input.send_keys(password)
 
-    if current_url == "https://kapusta-qa-ro.p.goit.global/transactions/expenses":
+        login_button = WebDriverWait(driver, 10).until(
+            ec.element_to_be_clickable((By.CSS_SELECTOR, ".Auth_buttonSubmit__ii556")))
+        login_button.click()
+
+        # Wait for the page to load after login
+        WebDriverWait(driver, 10).until(ec.url_to_be("https://kapusta-qa-ro.p.goit.global/transactions/expenses"))
+
         print("Passed login")
-    else:
-        print("Login failed")
-
-    driver.quit()
+    except NoSuchElementException as e:
+        print("Element not found. Please check the element's locator.")
+    except TimeoutException as e:
+        print("Timeout occurred while waiting for element.")
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+    finally:
+        driver.quit()
 
 tc1_verify_title()
 tc2_register()
